@@ -82,17 +82,6 @@
     color: var(--ink-light);
     letter-spacing: 0.01em;
     line-height: 1.45;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .deck::before {
-    content: '';
-    display: inline-block;
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: none;
-    flex-shrink: 0;
   }
   .deck a {
     color: var(--accent);
@@ -108,10 +97,10 @@
   /* ── MAIN LAYOUT ── */
   .main {
     display: grid;
-    grid-template-columns: 1fr 250px;
+    grid-template-columns: 1fr 350px;
     gap: 0;
     padding: 24px 48px 0;
-    max-width: 1100px;
+    max-width: 1200px;
     margin: 0 auto;
   }
 
@@ -210,10 +199,14 @@
   .county {
     cursor: pointer;
     transition: opacity 0.15s;
+    vector-effect: non-scaling-stroke;
   }
   .county:hover { opacity: 0.82; }
 
-  .state-borders { pointer-events: none; }
+  .state-borders {
+    pointer-events: none;
+    vector-effect: non-scaling-stroke;
+  }
 
   /* ── PERIOD LABEL ── */
   .period-label {
@@ -336,14 +329,7 @@
     padding: 0 0 0 28px;
     border-left: 1px solid var(--rule);
     margin-left: 24px;
-    max-height: calc(100vh - 160px);
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--rule) transparent;
   }
-  .sidebar::-webkit-scrollbar { width: 4px; }
-  .sidebar::-webkit-scrollbar-track { background: transparent; }
-  .sidebar::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 2px; }
 
   .sidebar-section {
     margin-bottom: 20px;
@@ -614,7 +600,7 @@
 
   /* ── SOURCE LINE ── */
   .source-line {
-    max-width: 1100px;
+    max-width: 1200px;
     margin: 16px auto 0;
     padding: 10px 40px 0;
     border-top: 1px solid var(--rule);
@@ -1089,7 +1075,7 @@
 <div id="loading">
   <h2>The Census Data Project</h2>
   <div class="loading-bar"><div class="loading-fill" id="loadFill"></div></div>
-  <span style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-faint)" id="loadMsg">Loading map data…</span>
+  <span style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-faint)" id="loadMsg">Loading Historical Census Data</span>
 </div>
 
 <header class="masthead">
@@ -2427,15 +2413,35 @@ function isPopupOpen() {
 // INIT
 // ══════════════════════════════════════════════════════════════════════════════
 async function init() {
-  setLoad(5, 'Loading map geometry…');
+  setLoad(2, 'Loading Historical Census Data');
 
-  const [topo, pepCsv, acsCsv] = await Promise.all([
-    d3.json(TOPO_URL),
-    d3.csv(PEP_CSV),
-    d3.csv(ACS_CSV),
-  ]);
+  // Fetch in parallel, but advance the bar as each file lands.
+  // Files are weighted by approximate size: ACS is largest (~25MB),
+  // PEP is mid (~12MB), TopoJSON is smallest (~3MB).
+  // Bytes can't be tracked reliably across gzipped hosts, so we
+  // tick by phase completion instead.
+  let pct = 2;
+  const advance = (delta, msg) => {
+    pct += delta;
+    setLoad(pct, msg);
+  };
 
-  setLoad(50, 'Processing PEP data…');
+  const topoP = d3.json(TOPO_URL).then(r => {
+    advance(8, 'Loaded map geometry');
+    return r;
+  });
+  const pepP = d3.csv(PEP_CSV).then(r => {
+    advance(20, 'Loaded population data');
+    return r;
+  });
+  const acsP = d3.csv(ACS_CSV).then(r => {
+    advance(40, 'Loaded economic & demographic data');
+    return r;
+  });
+
+  const [topo, pepCsv, acsCsv] = await Promise.all([topoP, pepP, acsP]);
+
+  setLoad(75, 'Processing PEP data…');
 
   // Index PEP data
   pepCsv.forEach(row => {
@@ -2448,7 +2454,7 @@ async function init() {
   });
   allFipsPep = Object.keys(pepData);
 
-  setLoad(65, 'Processing ACS data…');
+  setLoad(82, 'Processing ACS data…');
 
   // Index ACS data
   acsCsv.forEach(row => {
@@ -2465,7 +2471,7 @@ async function init() {
   });
   allFipsAcs = Object.keys(acsData);
 
-  setLoad(75, 'Rendering map…');
+  setLoad(90, 'Rendering map…');
 
   // Draw SVG map
   const container = document.getElementById('map-container');
@@ -2515,11 +2521,7 @@ async function init() {
     .translateExtent([[0, 0], [W, H]])
     .on('zoom', (event) => {
       mapG.attr('transform', event.transform);
-      const k = event.transform.k;
-      mapG.selectAll('.county').attr('stroke-width', 0.3 / k);
-      mapG.select('.state-borders').attr('stroke-width', 0.8 / k);
-
-      const zoomed = k > 1.05;
+      const zoomed = event.transform.k > 1.05;
       if (zoomed !== isZoomed) {
         isZoomed = zoomed;
         zoomHint.classList.toggle('hidden', zoomed);
@@ -2543,7 +2545,7 @@ async function init() {
     svg.transition().duration(250).call(zoom.scaleBy, 1 / 1.5);
   });
 
-  setLoad(90, 'Finalizing…');
+  setLoad(96, 'Finalizing…');
 
   buildAccordion();
   buildTicks();
