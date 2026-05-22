@@ -1081,7 +1081,7 @@
 <header class="masthead">
   <div class="masthead-title">
     <h1>The Census Data Project</h1>
-    <div class="subtitle">County-level demographic, population, economic &amp; community data &nbsp;·&nbsp; 2000–2024</div>
+    <div class="subtitle">County-level demographic, population, economic &amp; community data &nbsp;·&nbsp; 2000–2025</div>
   </div>
   <div class="masthead-meta">
     U.S. Census Bureau<br>
@@ -1113,7 +1113,7 @@
       <div class="slider-wrap">
         <div class="slider-track">
           <div class="slider-progress" id="sliderProgress"></div>
-          <input type="range" id="periodSlider" min="0" max="24" step="1" value="0">
+          <input type="range" id="periodSlider" min="0" max="25" step="1" value="0">
         </div>
         <div class="slider-ticks" id="sliderTicks"></div>
       </div>
@@ -1146,7 +1146,7 @@
 </div>
 
 <div class="source-line">
-  Source: U.S. Census Bureau — Population Estimates Program (PEP) &amp; American Community Survey 5-Year Estimates (ACS) &nbsp;·&nbsp; 2000–2024
+  Source: U.S. Census Bureau — Population Estimates Program (PEP) &amp; American Community Survey 5-Year Estimates (ACS) &nbsp;·&nbsp; 2000–2025
 </div>
 
 <div id="tooltip"></div>
@@ -1182,7 +1182,7 @@
 // ══════════════════════════════════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════════════════════════════════
-const PEP_CSV  = 'pep_county_merged_master.csv';
+const PEP_CSV  = 'pep_county_merged_master_v2025.csv';
 const ACS_CSV  = 'acs5_consolidated_v2.csv';
 const TOPO_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/counties-albers-10m.json';
 
@@ -1236,8 +1236,8 @@ const LAYERS = [
   { key: 'rentburden',  label: 'Rent as % of Income',      field: 'MedianRentAsPctOfIncome', diverge: false, source: SRC_ACS, bucket: 'acs', format: 'pct' },
 ];
 
-// ── PEP TIMELINE (25 slots: 2000-2024) ───────────────────────────────────────
-const PERIOD_CODES = [0,-9,-8,-7,-6,-5,-4,-3,-2,-1,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
+// ── PEP TIMELINE (26 slots: 2000-2025) ───────────────────────────────────────
+const PERIOD_CODES = [0,-9,-8,-7,-6,-5,-4,-3,-2,-1,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
 
 const PERIOD_LABELS = [
   'April 2000 — Census Baseline',
@@ -1265,9 +1265,10 @@ const PERIOD_LABELS = [
   'July 2021 – June 2022',
   'July 2022 – June 2023',
   'July 2023 – June 2024',
+  'July 2024 – June 2025',
 ];
 
-const PERIOD_SHORT = ['2000*','01','02','03','04','05','06','07','08','09','2010*','10','11','12','13','14','15','16','17','18','2020*','20','21','22','23'];
+const PERIOD_SHORT = ['2000*','01','02','03','04','05','06','07','08','09','2010*','10','11','12','13','14','15','16','17','18','2020*','20','21','22','23','24'];
 
 // ── ACS TIMELINE ─────────────────────────────────────────────────────────────
 // ACS years 2009–2024, each representing trailing 5-year average
@@ -1275,7 +1276,7 @@ const PERIOD_SHORT = ['2000*','01','02','03','04','05','06','07','08','09','2010
 const ACS_YEARS = [2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024];
 
 // Unified slider year mapping: slider index → approximate calendar year
-const SLIDER_YEAR = [2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024];
+const SLIDER_YEAR = [2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025];
 
 // ACS year → slider index lookup
 const ACS_YEAR_TO_SLIDER = {};
@@ -2069,13 +2070,13 @@ function updatePopupDeck() {
   if (POPUP.state.mode === 'actuals') {
     const layer = LAYERS.find(l => l.key === POPUP.state.actualKey);
     if (layer) {
-      const range = layer.source === SRC_ACS ? '2009\u20132024' : '2000\u20132024';
+      const range = layer.source === SRC_ACS ? '2009\u20132024' : '2000\u20132025';
       el.textContent = `${layer.label} \u00b7 ${range}`;
     } else {
       el.textContent = 'Pick a variable';
     }
   } else {
-    el.textContent = 'Indexed to 100 at first available year \u00b7 2000\u20132024';
+    el.textContent = 'Indexed to 100 at first available year \u00b7 2000\u20132025';
   }
 }
 
@@ -2169,7 +2170,7 @@ function drawPopupChart() {
   const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
   // X scale (shared across modes)
-  const x = d3.scaleLinear().domain([2000, 2024]).range([0, innerW]);
+  const x = d3.scaleLinear().domain([2000, 2025]).range([0, innerW]);
 
   // Value accessor and Y scale — depends on mode
   const valueAccessor = isActuals ? (p => p.raw) : (p => p.indexed);
@@ -2235,7 +2236,7 @@ function drawPopupChart() {
 
   // X-axis
   const xAxis = d3.axisBottom(x)
-    .tickValues([2000, 2005, 2010, 2015, 2020, 2024])
+    .tickValues([2000, 2005, 2010, 2015, 2020, 2025])
     .tickFormat(d3.format('d'))
     .tickSize(-innerH)
     .tickPadding(8);
@@ -2296,7 +2297,7 @@ function drawPopupChart() {
     const [mx] = d3.pointer(event);
     const yearFloat = x.invert(mx);
     let year = Math.round(yearFloat);
-    year = Math.max(2000, Math.min(2024, year));
+    year = Math.max(2000, Math.min(2025, year));
     const xPos = x(year);
 
     hoverLine.attr('x1', xPos).attr('x2', xPos).classed('visible', true);
